@@ -82,7 +82,6 @@ city <- urban_areas(year = 2020) |>
 ```
 
 Plot the location of the CBSA within the state and its tracts:
-
 ```{r}
 ggplot() +
   geom_sf(data = tracts,
@@ -97,13 +96,11 @@ ggplot() +
 ```
 
 Select all urban areas in the CBSA:
-
 ```{r}
 urban <- st_filter(city, cbsa)
 ```
 
 Plot urban boundaries within the the CBSA:
-
 ```{r}
 ggplot() +
   geom_sf(data = cbsa,
@@ -144,6 +141,7 @@ ggplot() +
           ) +
   theme_minimal()
 ```
+
 Remove any non-bordering CBSAs (if present):
 ```{r}
 cbsa_split <- cbsa |>
@@ -152,12 +150,14 @@ cbsa_split <- cbsa |>
 cbsa <- st_filter(cbsa_split, urban, .predicate = st_intersects)
 ```
 
+Merge cbsa and urban zones into one polygon:
 ```{r}
 merged_cbsa_urban <- st_union(cbsa, urban)
 
 # getting an error when trying to run it for New York
 ```
 
+Plot the merged CBSA:
 ```{r}
 ggplot() +
   geom_sf(data = merged_cbsa_urban,
@@ -168,10 +168,12 @@ ggplot() +
   theme_minimal()
 ```
 
+Obtain tract centroids:
 ```{r}
 tract_centroids <- st_centroid(tracts)
 ```
 
+Filter to keep tract centroids only within the merged CBSA:
 ```{r}
 tract_centroids <- tract_centroids |>
   st_filter(merged_cbsa_urban, 
@@ -180,6 +182,7 @@ tract_centroids <- tract_centroids |>
 # this step ensures that in the later tract st_filter/st_intersects chunk, none of the tracts are outside/bordering the cbsa but are only within it
 ```
 
+Map merged cbsa and tract centroids to ensure they're within its boundaries:
 ```{r}
 ggplot() +
   geom_sf(data =  merged_cbsa_urban,
@@ -194,14 +197,12 @@ ggplot() +
 ```
 
 Obtain the tracts:
-
 ```{r}
 tracts <- tracts |>
   semi_join(st_drop_geometry(tract_centroids), by = "GEOID")
 ```
 
-Plot the tracts within the CBSA:
-
+Plot the tracts within the merged CBSA:
 ```{r}
 ggplot() +
   geom_sf(data = merged_cbsa_urban,
@@ -212,6 +213,7 @@ ggplot() +
   theme_minimal()
 ```
 
+Obtain population for the selected state(s):
 ```{r}
 state_populations <- get_decennial(geography = "tract",
                            variables = "P1_001N",
@@ -221,6 +223,7 @@ state_populations <- get_decennial(geography = "tract",
 )
 ```
 
+Calculate population for tracts (before RUCA filtering):
 ```{r}
 tracts_no_geometry <- st_drop_geometry(tracts)
 
@@ -234,7 +237,7 @@ total_pre_ruca_population
 ```
 
 # Rurality tests:
-
+c
 Obtain Rural-Urban Commuting Area Codes from 2020 on a census tract level, in a .csv format from this [USDA.gov website](https://www.ers.usda.gov/data-products/rural-urban-commuting-area-codes). These values range from 1-10, with 1 being metropolitan zones (and 2, 3 measuring populations that largely commute to metropolitan zones), 4 being micropolitan zones (total populations from 10,000 to 49,999; and 5, 6 measure populations that largely commute to micropolitan zones), 7 being towns (with populations under 10,000; and 8, 9 measure populations that largely commute to the towns), and 10 being rural zones. Rename the file to RUCAcodes.csv and add to `notebooks` folder (had issues opening outside of this folder).
 
 ```{r}
@@ -260,12 +263,14 @@ RUCA_table <- RUCA_table |>
 ```{r}
 RUCA_table <- left_join(tracts, RUCA_table, by = "GEOID")
 
-RUCA_exclude <- 99
+RUCA_exclude <- 99 
+# 99 is the error code
 
 RUCA_table <- RUCA_table |>
   filter(!(PrimaryRUCA %in% RUCA_exclude))
 ```
 
+Plot tracts and their RUCA values from 1 to 10:
 ```{r}
 ggplot(RUCA_table, aes(fill = PrimaryRUCA)) + 
   geom_sf() + 
@@ -284,6 +289,7 @@ urban_tracts <- RUCA_table |>
 # https://stackoverflow.com/questions/25764810/delete-rows-based-on-range-of-values-in-column
 ```
 
+Plot tracts and their urban RUCA values from 1 to 6:
 ```{r}
 ggplot(urban_tracts, aes(fill = PrimaryRUCA)) + 
   geom_sf() + 
@@ -295,6 +301,7 @@ labs(fill = "RUCA value") +
           fill = NA)
 ```
 
+Calculate urban (post-RUCA filtering) tract population:
 ```{r}
 urban_tracts_no_geometry <- st_drop_geometry(urban_tracts)
 
@@ -318,6 +325,7 @@ Has to contain (for filtered_urban_tracts):
 - geometry
 - H1_001N (housing units)
 
+Create dataframe for the filtered tracts:
 ```{r}
 urban_tracts_df <- urban_populations |>
   rename(HousingCount = value.x,
@@ -335,6 +343,7 @@ urban_tracts_df <- urban_tracts_df |>
   st_as_sf()
 ```
 
+Plot tracts again using the dataframe to ensure it works:
 ```{r}
 ggplot(urban_tracts_df, aes(fill = PrimaryRUCA)) + 
   geom_sf() + 
@@ -364,8 +373,9 @@ save(merged_cbsa_urban,
      compress = "bzip2")
 ```
 
-Read tract counts and population counts:
+# Info for Excel file
 
+Read tract counts and population counts:
 ```{r}
 nrow(tracts)
 ```
@@ -383,7 +393,6 @@ total_urban_population
 ```
 
 Bbox boundaries:
-
 ```{r}
 tracts_bbox <- st_bbox(urban_tracts) |>
   st_as_sfc() |>
@@ -397,6 +406,7 @@ tracts_bbox
 # ymax = right top corner lat
 ```
 
+Map tracts and the buffered bbox boundaries:
 ```{r}
 ggplot() +
   layer_spatial(st_bbox(tracts_bbox),
@@ -424,4 +434,3 @@ USA_population <- get_decennial(geography = "tract",
 sum(USA_population$value)
 # should equal 324,280,186
 ```
-

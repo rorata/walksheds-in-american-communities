@@ -9,7 +9,6 @@ Estimated time to run: Several hours (experimenter's PC took 30 hours to route w
 A [walkshed](https://pedshed.net/?page_id=5), also called a pedestrian shed, is the measure of how far a person can walk starting at a given location within a given time range (in this project, within 15 minutes). This is heavily dependent on street layouts.
 
 Load packages:
-
 ```{r}
 options(java.parameters = "-Xmx20G")
 library(dplyr) # A Grammar of Data Manipulation
@@ -49,12 +48,13 @@ load(file = glue::glue(here::here(),
 
 Retrieve OSM data from [BBBike](https://extract.bbbike.org) using the coordinates of the bounding box found in `/notebooks/00-Basic-Data.Rmd`. It will be a proto-buffer file (pbf). Save under `data-raw/r5_graph/$CITY_NAME$`. This has to be done manually before running the remainder of this notebook.
 
+Then, set up the pathing to the PBF file to use for the {r5r} routing:
 ```{r set up r5 path}
 r5_path <- file.path(glue::glue(here::here(), "/data-raw/r5_graph/{params$city}/"))
 # fix pathing when possible
 ```
 
-Build the graph:
+Build the network graph:
 ```{r r build-graph}
 r5_cma <- setup_r5(data_path = r5_path, 
                             verbose = FALSE)
@@ -66,15 +66,16 @@ r5_cma <- setup_r5(data_path = r5_path,
 #                             verbose = FALSE)
 ```
 
-The origins are coordinates of centroids tracts and the destinations the coordinates of the h3 geohashes. 
-
-Obtain the tract centroids (the geometry is degenerate and needs to be fixed):
+Rename the imported/reopened files:
 ```{r}
 tracts <- urban_tracts_df
 
 cbsa <- merged_cbsa_urban
 ```
 
+The origins are coordinates of centroids tracts and the destinations the coordinates of the h3 geohashes. 
+
+Obtain the tract centroids (the geometry is degenerate and needs to be fixed):
 ```{r prepare-inputs}
 origins_da <- tracts |>
   st_make_valid() |>
@@ -206,6 +207,7 @@ time.taken <- end.time - start.time
 time.taken
 ```
 
+Swap the location of the to and from id columns (they're initially in the incorrect spots):
 ```{r}
 ttm_i <- ttm_i |>
   rename(from_id = to_id,
@@ -214,6 +216,7 @@ ttm_i <- ttm_i |>
 # If running into issues with multipolygon generation later, ensure from_id are tract ids (only numbers), and to_id are h3 ids (numbers with a letter at the end)
 ```
 
+Save the ttm file:
 ```{r}
 # TTM
 save(ttm_i, 
@@ -280,22 +283,24 @@ ggplot() +
 
 Save walksheds:
 ```{r save origin and destination files}
-# Origins
+# Walksheds
 save(walksheds, 
      file = glue::glue(here::here(),
                        "/data/{params$city}_walksheds.rda"),
      compress = "bzip2")
 ```
 
+Plot a sample tract's walkshed:
 ```{r}
 # ggplot() +
 #   geom_sf(data = walksheds |>
 #             filter(GEOID == "",
 #                    ))
+
+# have to input the census tract code, found in walksheds
 ```
 
 Calculate area of tract walksheds:
-
 ```{r}
 walkshed_areas <- walksheds |>
   mutate(area = as.numeric(st_area(geometry)))
@@ -303,7 +308,6 @@ walkshed_areas <- walksheds |>
 
 
 Create walksheds df with previous tracts df data and walkshed data:
-
 ```{r}
 urban_tracts_df <- urban_tracts_df |>
   st_as_sf()
@@ -315,13 +319,12 @@ walksheds_df <- right_join(urban_tracts_df, walkshed_areas, by = "GEOID")
 ```
 
 Rename walkshed area column:
-
 ```{r}
 walksheds_df <- walksheds_df |>
   rename(WalkshedArea = area)
 ```
 
-
+Plot the tracts and the walkshed area values:
 ```{r}
 ggplot(walksheds_df, aes(fill = WalkshedArea)) + 
   geom_sf() + 
@@ -330,6 +333,7 @@ ggplot(walksheds_df, aes(fill = WalkshedArea)) +
 labs(fill = "Walkshed Size (m^2)")
 ```
 
+Calculate the new tract populations (based on the ones for which there are walksheds):
 ```{r}
 total_walksheds_population <- sum(walksheds_df$PopulationCount)
 
@@ -338,7 +342,7 @@ total_walksheds_population
 # note to self: record the value in the .xlsx sheet
 ```
 
-
+Save the walksheds dataframe:
 ```{r}
 # Origins
 save(walksheds_df, 
