@@ -1,0 +1,119 @@
+---
+title: "tract-removal-scripts"
+output: html_document
+---
+
+Used for
+
+
+```{r}
+neighbouring_tracts <- urban_tracts |>
+  st_union() |>
+  st_cast("POLYGON") |>
+  st_as_sf()
+
+neighbouring_tracts_buffers <- urban_tracts |>
+  st_union() |>
+  st_cast("POLYGON") |>
+  st_buffer(dist = 10000) |>
+  st_as_sf()
+```
+
+```{r}
+tract_polygon_buffered <- neighbouring_tracts_buffers[which.max(st_area(neighbouring_tracts)), ]
+```
+
+
+```{r}
+# tract_polygon <- neighbouring_tracts[(-1:-7), (-8:-13)] |>
+#   st_as_sf()
+
+# neighbouring_tracts_buffers <- neighbouring_tracts |>
+#   st_buffer(dist = 1000)
+
+tract_polygon <- neighbouring_tracts |>
+  st_filter(tract_polygon_buffered, 
+            .predicate = st_within)
+```
+
+```{r}
+ggplot() +
+  geom_sf(data =  tract_polygon,
+          fill = "lightgray") +
+  geom_sf(data = tract_centroids,
+          color = "blue",
+          fill = NA,
+          size = 0.2) +
+  theme_minimal()
+```
+
+Obtain the tracts:
+```{r}
+filtered_urban_tract_centroids <- tract_centroids |>
+  st_filter(tract_polygon, 
+            .predicate = st_intersects)
+```
+
+```{r}
+ggplot() +
+  geom_sf(data = tract_polygon,
+          fill = "lightgray") +
+  geom_sf(data = filtered_urban_tract_centroids,
+          color = "blue",
+          fill = NA,
+          size = 0.1) +
+  theme_minimal()
+```
+
+```{r}
+# filtered_urban_tracts <- tracts |>
+#   st_filter(filtered_urban_tract_centroids, 
+#             .predicate = st_intersects)
+
+# for this, could try to just apply the tracts to the filtered_urban_tracts geoids instead of doing this
+
+filtered_urban_tracts <- tracts |>
+  semi_join(st_drop_geometry(filtered_urban_tract_centroids), by = "GEOID")
+```
+
+```{r}
+ggplot() +
+  geom_sf(data = tract_polygon,
+          fill = "lightgray") +
+  geom_sf(data = urban_tracts,
+          color = "blue",
+          fill = "blue") +
+  geom_sf(data = filtered_urban_tracts,
+          color = "red",
+          fill = "green") +
+  theme_minimal()
+```
+
+Bbox boundaries:
+
+```{r}
+tracts_bbox <- st_bbox(filtered_urban_tracts) |>
+  st_as_sfc() |>
+  st_buffer(dist = 1000) |> # note that the max walk distance in a straight line within 15 minutes at 3.6kmph is 900m
+  st_bbox()
+
+tracts_bbox
+# xmin = left-lower corner lng
+# xmax = right top corner lng
+# ymin = left lower corner lat
+# ymax = right top corner lat
+```
+
+```{r}
+ggplot() +
+  layer_spatial(st_bbox(tracts_bbox),
+          fill = "#8B8989") +
+  geom_sf(data = tract_polygon,
+          fill = "#CDC9C9") +
+  geom_sf(data = filtered_urban_tracts,
+          color = "black",
+          fill = NA) +
+  theme_minimal()
+
+# ensure that all tracts are well within the bbox
+```
