@@ -296,7 +296,12 @@ Plot a sample tract's walkshed:
 #   geom_sf(data = walksheds |>
 #             filter(GEOID == "",
 #                    ))
+# 
+# walkshed_sample <- slice_sample(walksheds, n = 1)
 
+ggplot() +
+  geom_sf(data = walksheds |>
+            slice_sample(n = 1))
 # have to input the census tract code, found in walksheds
 ```
 
@@ -333,11 +338,34 @@ ggplot(walksheds_df, aes(fill = WalkshedArea)) +
 labs(fill = "Walkshed Size (m^2)")
 ```
 
+Plot the tracts with RUCA value 1 (fully metropolitan/urban/non-commuting tracts) and their walkshed area values:
+```{r}
+RUCA_exclude <- c(2:6)
+
+RUCA_1_tracts <- walksheds_df |>
+  filter(!(PrimaryRUCA %in% RUCA_exclude))
+
+ggplot(RUCA_1_tracts, aes(fill = WalkshedArea)) + 
+  geom_sf() + 
+  theme_void() +
+  scale_fill_viridis_c(option = "turbo") +
+labs(fill = "Walkshed Size (m^2)")
+```
+
 Calculate the new tract populations (based on the ones for which there are walksheds):
 ```{r}
 total_walksheds_population <- sum(walksheds_df$PopulationCount)
 
 total_walksheds_population
+
+# note to self: record the value in the .xlsx sheet
+```
+
+Calculate the RUCA value 1 tract populations (based on the ones for which there are walksheds):
+```{r}
+RUCA_1_population <- sum(RUCA_1_tracts$PopulationCount)
+
+RUCA_1_population
 
 # note to self: record the value in the .xlsx sheet
 ```
