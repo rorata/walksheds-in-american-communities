@@ -292,17 +292,9 @@ save(walksheds,
 
 Plot a sample tract's walkshed:
 ```{r}
-# ggplot() +
-#   geom_sf(data = walksheds |>
-#             filter(GEOID == "",
-#                    ))
-# 
-# walkshed_sample <- slice_sample(walksheds, n = 1)
-
 ggplot() +
   geom_sf(data = walksheds |>
             slice_sample(n = 1))
-# have to input the census tract code, found in walksheds
 ```
 
 Calculate area of tract walksheds:
