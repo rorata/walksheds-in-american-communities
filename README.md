@@ -1,7 +1,5 @@
 ------------------------------------------------------------------------
 
-editor_options: markdown: wrap: 72 ---
-
 # Walksheds in American Communities
 
 The first segment of an open-source/open-science Master's Thesis project! The data generated (found in the `data` folder) will be used for the upcoming R package [walkshedUS](https://github.com/paezha/walkshedUS). The guide on how to use this repository and its notebooks to generate your own walkshed data for any city in the USA can be found below, so enjoy!
@@ -124,7 +122,42 @@ Once all of the preliminary setup is complete, you can now run the notebook. How
 
 ## Obtaining the OSM data
 
-Will be written soon. For now refer to the Excel file in the repository for BBOX codes to input into [bbbike](https://extract.bbbike.org/). Download these files as PBF and input into `/data-raw/r5_graph/replace_with_city_name`
+For routing the walksheds, we will need network data. In our case, we use data from OpenStreetMap (OSM). However, there is a process to obtaining the OSM data for the region we're working with.
+
+We use a website called [bbbike](https://extract.bbbike.org/) to extract the OSM area we want to work with, as opposed to downloading the full data for one or more states (which may not be feasible, and would take up a lot more space than needed).
+
+So, in notebook 00, on line 396, you can find code that calculates the bounding box of the area we are working with. There is a buffer zone of 1000 meters added as well, in case the walkshed extends past the most exterior tracts (of the MSA). The coordinates of the bbox are then outputted, and can be input into bbbike.
+
+![](guide-photos/line396bbox.png)
+
+Additionally, you can see what the tracts and its bounding box look like in the ggplot map below this chunk of code, as seen here:
+
+![](guide-photos/philadelphiabboxmap.png)
+
+Going back to the bbox coordinates, you will notice four outputs in the following order:
+
+1.  **xmin** (this will be the left-lower corner longitude)
+2.  **ymin** (this will be the left-lower corner latitude)
+3.  **xmax** (this will be the right-top corner longitude)
+4.  **ymax** (this will be the right-top corner latitude)
+
+Now, navigate to the [bbbike](https://extract.bbbike.org/) website. Search for your given area, and select one of the options for applies (such as seen below, and in this case, either 1 or 2 will be fine since you will be manually changing the coordinates regardless).
+
+![](guide-photos/philadelphiasearchbbbike.png)
+
+This is how the bounding box will initially look (likely not encompassing the entire region you will be working with):
+
+![](guide-photos/originalphiladelphiaboundarybbbike.png)
+
+Next, select "show lng/lat" and input your corresponding coordinates, changing the bounding box to correspond to the geographic area you will be working with, as seen below:
+
+![](guide-photos/bbbikelonglat.png)
+
+Then, select the format to be "Protocol Buffer (PBF)" and type in your email address, then extract the OSM PBF file to your email. Within a few minutes, you should receive a link to download the network file. Once it is on your device, navigate to "walksheds-in-american-communities/data-raw/r5_graph" (create the r5_graph folder if not initially present). Then, within the r5_graph folder, create a folder for your city (without including the state names). For instance, for Philadelphia, your folder path should look as such:
+
+`/walksheds-in-american-communities/data-raw/r5_graph/Philadelphia`
+
+Then, move the PBF file you just downloaded into the `r5_graph/city_name` folder. This step is now complete for now, and in notebook 01 later, you will utilize this file to create a network and use it for your walkshed routing for each tract you're examining.
 
 ## Notebook 01: Walkshed Routing
 
